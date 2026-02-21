@@ -1,0 +1,74 @@
+[
+    {
+        "name": "Adjustable Dumbbells Set",
+        "description": "Space-saving adjustable dumbbells from 5-52.5 lbs each. Quick-change weight selection for efficient workouts.",
+        "price": 15999,
+        "originalPrice": 19999,
+        "image": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400",
+        "stock": 25,
+        "rating": 4.8,
+        "numReviews": 167,
+        "featured": true,
+        "categoryName": "Sports & Fitness"
+    },
+    {
+        "name": "Running Shoes Pro",
+        "description": "High-performance running shoes with responsive cushioning, breathable mesh upper, and carbon fiber plate for energy return.",
+        "price": 8999,
+        "originalPrice": 11999,
+        "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+        "stock": 80,
+        "rating": 4.7,
+        "numReviews": 289,
+        "featured": true,
+        "categoryName": "Sports & Fitness"
+    },
+    {
+        "name": "Vitamin C Serum",
+        "description": "20% Vitamin C serum with Hyaluronic Acid and Vitamin E. Brightens skin, reduces dark spots, and boosts collagen production.",
+        "price": 1299,
+        "originalPrice": 1799,
+        "image": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400",
+        "stock": 200,
+        "rating": 4.6,
+        "numReviews": 456,
+        "featured": true,
+        "categoryName": "Beauty & Personal Care"
+    },
+    {
+        "name": "Luxury Perfume Set",
+        "description": "Collection of 5 premium fragrances in travel-size bottles. Includes woody, floral, and fresh scents for any occasion.",
+        "price": 4999,
+        "originalPrice": 6999,
+        "image": "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400",
+        "stock": 60,
+        "rating": 4.7,
+        "numReviews": 178,
+        "featured": false,
+        "categoryName": "Beauty & Personal Care"
+    },
+    {
+        "name": "Electric Toothbrush",
+        "description": "Sonic electric toothbrush with 5 cleaning modes, 2-minute timer, and 30-day battery life. Includes 4 brush heads.",
+        "price": 2499,
+        "originalPrice": 3499,
+        "image": "https://images.unsplash.com/photo-1559591937-efa9e5b09c18?w=400",
+        "stock": 100,
+        "rating": 4.5,
+        "numReviews": 234,
+        "featured": false,
+        "categoryName": "Beauty & Personal Care"
+    },
+    {
+        "name": "Hair Dryer Professional",
+        "description": "Ionic hair dryer with 1875W motor, multiple heat and speed settings, and concentrator nozzle. Reduces frizz and drying time.",
+        "price": 3999,
+        "originalPrice": 5499,
+        "image": "https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=400",
+        "stock": 70,
+        "rating": 4.6,
+        "numReviews": 189,
+        "featured": false,
+        "categoryName": "Beauty & Personal Care"
+    }
+]

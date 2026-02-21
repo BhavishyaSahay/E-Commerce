@@ -1,0 +1,20 @@
+[
+    {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "password": "$2a$10$rQnR4nQVSrJ3xqPNzELnS.6Q2mFZ1jXJvNhM5kCxV/q.0RJp8WjwG",
+        "role": "user"
+    },
+    {
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "password": "$2a$10$rQnR4nQVSrJ3xqPNzELnS.6Q2mFZ1jXJvNhM5kCxV/q.0RJp8WjwG",
+        "role": "user"
+    },
+    {
+        "name": "Admin User",
+        "email": "admin@shopsmart.com",
+        "password": "$2a$10$rQnR4nQVSrJ3xqPNzELnS.6Q2mFZ1jXJvNhM5kCxV/q.0RJp8WjwG",
+        "role": "admin"
+    }
+]

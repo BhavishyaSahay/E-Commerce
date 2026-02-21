@@ -1,0 +1,32 @@
+[
+    {
+        "name": "Electronics",
+        "description": "Discover the latest gadgets, smartphones, laptops, and electronic accessories.",
+        "image": "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400"
+    },
+    {
+        "name": "Clothing",
+        "description": "Trendy fashion for men, women, and kids. From casual to formal wear.",
+        "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400"
+    },
+    {
+        "name": "Home & Kitchen",
+        "description": "Everything you need to make your home beautiful and functional.",
+        "image": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400"
+    },
+    {
+        "name": "Books",
+        "description": "Explore our collection of bestsellers, fiction, non-fiction, and educational books.",
+        "image": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400"
+    },
+    {
+        "name": "Sports & Fitness",
+        "description": "Gear up for your fitness journey with our sports and exercise equipment.",
+        "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400"
+    },
+    {
+        "name": "Beauty & Personal Care",
+        "description": "Skincare, makeup, and personal care products for your daily routine.",
+        "image": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400"
+    }
+]
