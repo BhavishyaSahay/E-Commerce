@@ -13,7 +13,9 @@ const orderRoutes = require('./routes/orderRoutes');
 const app = express();
 
 // Connect to database
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // Middleware
 app.use(cors());
