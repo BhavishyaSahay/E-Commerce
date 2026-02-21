@@ -11,7 +11,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -21,11 +20,39 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+        # Tell the action exactly where to look for the lock files
+        cache-dependency-path: |
+          client/package-lock.json
+          server/package-lock.json
+          
+    # ---- Client Build Steps ----
+    - name: Install Client Dependencies
+      run: npm ci
+      working-directory: ./client
+      
+    - name: Build Client
+      run: npm run build --if-present
+      working-directory: ./client
+      
+    - name: Test Client
+      run: npm test --if-present
+      working-directory: ./client
+
+    # ---- Server Build Steps ----
+    - name: Install Server Dependencies
+      run: npm ci
+      working-directory: ./server
+      
+    - name: Build Server
+      run: npm run build --if-present
+      working-directory: ./server
+      
+    - name: Test Server
+      run: npm test --if-present
+      working-directory: ./server
