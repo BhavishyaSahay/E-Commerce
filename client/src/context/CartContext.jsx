@@ -37,7 +37,7 @@ export const CartProvider = ({ children }) => {
 
         try {
             setLoading(true);
-            const response = await fetch(`${apiUrl}/api/cart`, {
+            const response = await fetch(`/api/cart`, {
                 headers: {
                     'Authorization': `Bearer ${user.token}`
                 }
@@ -58,7 +58,7 @@ export const CartProvider = ({ children }) => {
         if (isAuthenticated) {
             try {
                 setLoading(true);
-                const response = await fetch(`${apiUrl}/api/cart`, {
+                const response = await fetch(`/api/cart`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export const CartProvider = ({ children }) => {
         if (isAuthenticated) {
             try {
                 setLoading(true);
-                const response = await fetch(`${apiUrl}/api/cart/${itemId}`, {
+                const response = await fetch(`/api/cart/${itemId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export const CartProvider = ({ children }) => {
         if (isAuthenticated) {
             try {
                 setLoading(true);
-                const response = await fetch(`${apiUrl}/api/cart/${itemId}`, {
+                const response = await fetch(`/api/cart/${itemId}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${user.token}`
@@ -175,7 +175,7 @@ export const CartProvider = ({ children }) => {
         if (isAuthenticated) {
             try {
                 setLoading(true);
-                const response = await fetch(`${apiUrl}/api/cart`, {
+                const response = await fetch(`/api/cart`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${user.token}`
