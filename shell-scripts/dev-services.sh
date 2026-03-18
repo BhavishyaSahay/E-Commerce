@@ -93,6 +93,7 @@ start_services() {
   fi
 
   echo "[INFO] Services started."
+  exit 0
 }
 
 ########################################
