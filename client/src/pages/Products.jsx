@@ -20,7 +20,7 @@ const Products = () => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const res = await fetch(`${apiUrl}/api/categories`);
+                const res = await fetch(`/api/categories`);
                 if (res.ok) {
                     const data = await res.json();
                     setCategories(data);
@@ -46,7 +46,7 @@ const Products = () => {
                 if (searchQuery) params.append('search', searchQuery);
                 if (searchParams.get('featured')) params.append('featured', 'true');
 
-                const res = await fetch(`${apiUrl}/api/products?${params}`);
+                const res = await fetch(`/api/products?${params}`);
                 if (res.ok) {
                     const data = await res.json();
                     setProducts(data.products);
