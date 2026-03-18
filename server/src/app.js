@@ -21,7 +21,7 @@ if (process.env.NODE_ENV !== 'test') {
 app.use(cors());
 app.use(express.json());
 
-// Health Check Route
+// ✅ Health Check Route
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -30,19 +30,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Routes
+// ✅ API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 
-// Root Route
-app.get('/', (req, res) => {
-  res.send('ShopSmart Backend Service');
-});
+// ❌ REMOVED: root route that was blocking frontend
 
-// Error handling middleware
+// ✅ Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({

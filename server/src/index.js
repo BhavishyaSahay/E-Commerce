@@ -4,18 +4,20 @@ const express = require('express');
 
 const app = require('./app');
 
-const PORT = 5004;
+const PORT = process.env.PORT || 5004;
 
-// ✅ Serve frontend build
-const __dirnameResolved = path.resolve();
+// ✅ Absolute path to frontend build
+const distPath = path.join(__dirname, '../../client/dist');
 
-app.use(express.static(path.join(__dirnameResolved, '../client/dist')));
+// ✅ Serve static frontend files
+app.use(express.static(distPath));
 
-// ✅ Handle React routing (important for SPA)
+// ✅ React SPA fallback (MUST be last route)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirnameResolved, '../client/dist/index.html'));
+    res.sendFile(path.join(distPath, 'index.html'));
 });
 
+// ✅ Start server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
