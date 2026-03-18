@@ -21,7 +21,7 @@ check_health() {
   echo "[INFO] Checking backend health..."
 
   for i in {1..5}; do
-    if curl -f -s http://localhost:5001/api/health >/dev/null 2>&1; then
+    if curl -f -s http://localhost:5004/api/health >/dev/null 2>&1; then
       echo "[OK] Backend is Up!"
       return 0
     fi
