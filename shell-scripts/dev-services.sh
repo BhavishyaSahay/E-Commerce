@@ -54,7 +54,7 @@ start_services() {
     echo "[INFO] Starting backend..."
     cd "$BACKEND_DIR"
 
-    npm run dev &
+    npm start &
     BACKEND_PID=$!
     echo "$BACKEND_PID" > "$BACKEND_PID_FILE"
     echo "[INFO] Backend PID: $BACKEND_PID"
