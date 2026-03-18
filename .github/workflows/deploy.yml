@@ -1,0 +1,35 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/E-Commerce
+            git pull origin main
+            
+            # Use the idempotent setup script to install dependencies
+            chmod +x shell-scripts/dev-setup.sh
+            ./shell-scripts/dev-setup.sh
+            
+            # Build client
+            cd client
+            npm run build
+            cd ..
+            
+            # Restart services
+            chmod +x shell-scripts/dev-services.sh
+            ./shell-scripts/dev-services.sh stop
+            ./shell-scripts/dev-services.sh start
