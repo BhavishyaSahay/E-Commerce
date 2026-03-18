@@ -35,10 +35,10 @@ check_health() {
 }
 
 ########################################
-# 🚀 START SERVICES
+# 🚀 START SERVICES (PRODUCTION)
 ########################################
 start_services() {
-  echo "[INFO] Starting services..."
+  echo "[INFO] Starting production services..."
 
   ########################################
   # ---- Backend ----
@@ -51,15 +51,15 @@ start_services() {
       exit 1
     fi
 
-    echo "[INFO] Starting backend..."
+    echo "[INFO] Starting backend (production)..."
     cd "$BACKEND_DIR"
 
+    npm install
     npm start &
     BACKEND_PID=$!
     echo "$BACKEND_PID" > "$BACKEND_PID_FILE"
     echo "[INFO] Backend PID: $BACKEND_PID"
 
-    # 🩺 Verify backend actually started
     if ! check_health; then
       echo "[ERROR] Backend failed health check. Stopping..."
       kill "$BACKEND_PID" 2>/dev/null || true
@@ -70,29 +70,7 @@ start_services() {
     cd "$PROJECT_ROOT"
   fi
 
-  ########################################
-  # ---- Frontend ----
-  ########################################
-  if [ -f "$FRONTEND_PID_FILE" ]; then
-    echo "[INFO] Frontend already running (pid file exists). Skipping."
-  else
-    if [ ! -d "$FRONTEND_DIR" ]; then
-      echo "[ERROR] Frontend directory not found: $FRONTEND_DIR"
-      exit 1
-    fi
-
-    echo "[INFO] Starting frontend..."
-    cd "$FRONTEND_DIR"
-
-    npm run dev &
-    FRONTEND_PID=$!
-    echo "$FRONTEND_PID" > "$FRONTEND_PID_FILE"
-    echo "[INFO] Frontend PID: $FRONTEND_PID"
-
-    cd "$PROJECT_ROOT"
-  fi
-
-  echo "[INFO] Services started."
+  echo "[INFO] Production services started."
   exit 0
 }
 
