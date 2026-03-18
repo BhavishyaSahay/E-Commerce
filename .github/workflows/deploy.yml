@@ -17,6 +17,9 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            if [ ! -d "/home/ubuntu/E-Commerce" ]; then
+              git clone https://github.com/BhavishyaSahay/E-Commerce.git /home/ubuntu/E-Commerce
+            fi
             cd /home/ubuntu/E-Commerce
             git pull origin main
             
