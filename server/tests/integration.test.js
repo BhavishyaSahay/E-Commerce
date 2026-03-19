@@ -23,7 +23,7 @@ describe('Integration Tests: API + DB / Modules Interaction', () => {
         it('should fetch the products list from the database successfully', async () => {
             const res = await request(app).get('/api/products');
             expect(res.statusCode).toEqual(200);
-            expect(Array.isArray(res.body)).toBeTruthy();
+            expect(Array.isArray(res.body.products)).toBeTruthy();
         });
     });
 
