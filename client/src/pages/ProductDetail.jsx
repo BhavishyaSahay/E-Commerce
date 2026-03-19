@@ -16,7 +16,7 @@ const ProductDetail = () => {
         const fetchProduct = async () => {
             try {
                 setLoading(true);
-                const res = await fetch(`${apiUrl}/api/products/${id}`);
+                const res = await fetch(`/api/products/${id}`);
                 if (res.ok) {
                     const data = await res.json();
                     setProduct(data);

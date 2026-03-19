@@ -13,8 +13,8 @@ const Home = () => {
         const fetchData = async () => {
             try {
                 const [productsRes, categoriesRes] = await Promise.all([
-                    fetch(`${apiUrl}/api/products/featured`),
-                    fetch(`${apiUrl}/api/categories`)
+                    fetch(`/api/products/featured`),
+                    fetch(`/api/categories`)
                 ]);
 
                 if (productsRes.ok) {
