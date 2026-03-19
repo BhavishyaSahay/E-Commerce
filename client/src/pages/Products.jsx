@@ -10,7 +10,6 @@ const Products = () => {
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-    const apiUrl = import.meta.env.VITE_API_URL || '';
 
     const currentCategory = searchParams.get('category') || '';
     const currentSort = searchParams.get('sort') || 'newest';

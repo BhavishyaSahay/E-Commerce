@@ -7,7 +7,7 @@ const Checkout = () => {
     const { cart, clearCart } = useCart();
     const { user } = useAuth();
     const navigate = useNavigate();
-    const apiUrl = import.meta.env.VITE_API_URL || '';
+
 
     const [formData, setFormData] = useState({
         fullName: user?.name || '',

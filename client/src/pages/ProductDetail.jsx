@@ -10,7 +10,6 @@ const ProductDetail = () => {
     const [quantity, setQuantity] = useState(1);
     const [addedToCart, setAddedToCart] = useState(false);
     const { addToCart } = useCart();
-    const apiUrl = import.meta.env.VITE_API_URL || '';
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -55,7 +54,7 @@ const ProductDetail = () => {
                 <div className="empty-state">
                     <div className="empty-state-icon">❌</div>
                     <h3 className="empty-state-title">Product Not Found</h3>
-                    <p className="empty-state-text">The product you're looking for doesn't exist.</p>
+                    <p className="empty-state-text">The product you&apos;re looking for doesn&apos;t exist.</p>
                     <Link to="/products" className="btn btn-primary">
                         Browse Products
                     </Link>

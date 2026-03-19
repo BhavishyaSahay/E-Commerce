@@ -15,7 +15,7 @@ export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState({ items: [], totalAmount: 0 });
     const [loading, setLoading] = useState(false);
     const { user, isAuthenticated } = useAuth();
-    const apiUrl = import.meta.env.VITE_API_URL || '';
+
 
     // Fetch cart when user logs in
     useEffect(() => {
@@ -30,6 +30,7 @@ export const CartProvider = ({ children }) => {
                 setCart({ items: [], totalAmount: 0 });
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
 
     const fetchCart = async () => {

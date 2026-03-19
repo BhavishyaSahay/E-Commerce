@@ -7,7 +7,6 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
-    const apiUrl = import.meta.env.VITE_API_URL || '';
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -71,7 +70,7 @@ const Orders = () => {
                     <div className="empty-state-icon">📦</div>
                     <h3 className="empty-state-title">No Orders Yet</h3>
                     <p className="empty-state-text">
-                        You haven't placed any orders yet. Start shopping to see your orders here.
+                        You haven&apos;t placed any orders yet. Start shopping to see your orders here.
                     </p>
                     <Link to="/products" className="btn btn-primary">
                         Start Shopping

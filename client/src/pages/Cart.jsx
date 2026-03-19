@@ -30,7 +30,7 @@ const Cart = () => {
                     <div className="empty-state-icon">🛒</div>
                     <h3 className="empty-state-title">Your Cart is Empty</h3>
                     <p className="empty-state-text">
-                        Looks like you haven't added anything to your cart yet.
+                        Looks like you haven&apos;t added anything to your cart yet.
                     </p>
                     <Link to="/products" className="btn btn-primary">
                         Start Shopping

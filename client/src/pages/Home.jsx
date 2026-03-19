@@ -7,7 +7,6 @@ const Home = () => {
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-    const apiUrl = import.meta.env.VITE_API_URL || '';
 
     useEffect(() => {
         const fetchData = async () => {

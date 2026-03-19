@@ -9,7 +9,6 @@ const OrderDetail = () => {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
-    const apiUrl = import.meta.env.VITE_API_URL || '';
     const orderPlaced = location.state?.orderPlaced;
 
     useEffect(() => {
@@ -73,7 +72,7 @@ const OrderDetail = () => {
                 <div className="empty-state">
                     <div className="empty-state-icon">❌</div>
                     <h3 className="empty-state-title">Order Not Found</h3>
-                    <p className="empty-state-text">The order you're looking for doesn't exist.</p>
+                    <p className="empty-state-text">The order you&apos;re looking for doesn&apos;t exist.</p>
                     <Link to="/orders" className="btn btn-primary">
                         View All Orders
                     </Link>
