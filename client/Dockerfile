@@ -12,6 +12,9 @@ RUN npm run build
 # ---- Stage 2 - Production ---
 FROM nginx:alpine
 
+# Copy built assets
+COPY --from=build /usr/src/app/dist /usr/share/nginx/html
+
 # Copy custom nginx config for reverse proxy
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
