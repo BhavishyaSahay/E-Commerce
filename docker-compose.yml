@@ -5,11 +5,11 @@ services:
     image: bhavihsyasahay/shop-backend:latest
     container_name: shop-backend
     ports:
-      - "5000:5000"
+      - "5004:5004"
     environment:
       - MONGODB_URI=mongodb+srv://yash:yash@cluster0.l3nouup.mongodb.net/?appName=Cluster0
       - JWT_SECRET=shopsmart_jwt_secret_key_2024_dummy
-      - PORT=5000
+      - PORT=5004
 
   frontend:
     image: bhavihsyasahay/shop-frontend:latest
