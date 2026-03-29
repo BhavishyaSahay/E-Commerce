@@ -6,16 +6,7 @@ const app = require('./app');
 
 const PORT = process.env.PORT || 5004;
 
-// ✅ Absolute path to frontend build
-const distPath = path.join(__dirname, '../../client/dist');
-
-// ✅ Serve static frontend files
-app.use(express.static(distPath));
-
-// ✅ React SPA fallback (MUST be last route)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-});
+// Static files are now handled by Nginx in the frontend container
 
 // ✅ Start server
 app.listen(PORT, () => {
