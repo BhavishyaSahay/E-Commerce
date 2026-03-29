@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Dockerized Deploy to EC2
 
 on:
   push:
@@ -6,33 +6,72 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Deploy via SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shop-backend:latest
+      
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shop-frontend:latest
+
+
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
+
+            echo "🚀 Connecting to server..."
+
+            # Clone repo if not exists
             if [ ! -d "/home/ubuntu/E-Commerce" ]; then
               git clone https://github.com/BhavishyaSahay/E-Commerce.git /home/ubuntu/E-Commerce
             fi
+
             cd /home/ubuntu/E-Commerce
+
+            echo "Pull latest code"
             git pull origin main
-            
-            # Use the idempotent setup script to install dependencies
-            chmod +x shell-scripts/dev-setup.sh
-            ./shell-scripts/dev-setup.sh
-            
-            # Build client
-            cd client
-            npm run build
-            cd ..
-            
-            # Restart services
-            chmod +x shell-scripts/dev-services.sh
-            ./shell-scripts/dev-services.sh stop
-            ./shell-scripts/dev-services.sh start
+
+            echo "Pull latest Docker images"
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shop-backend:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shop-frontend:latest
+
+            echo "Stop old containers"
+            docker compose down
+
+            echo "Clean old images (optional)"
+            docker system prune -f
+
+            echo "Start new containers"
+            docker compose up -d
+
+            echo "Deployment complete"
+        
+
