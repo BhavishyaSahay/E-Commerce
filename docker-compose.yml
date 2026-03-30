@@ -4,8 +4,6 @@ services:
   backend:
     image: bhavihsyasahay/shop-backend:latest
     container_name: shop-backend
-    # ports:
-    #   - "5004:5004"
     environment:
       - MONGODB_URI=mongodb+srv://yash:yash@cluster0.l3nouup.mongodb.net/?appName=Cluster0
       - JWT_SECRET=shopsmart_jwt_secret_key_2024_dummy
@@ -14,8 +12,6 @@ services:
   frontend:
     image: bhavihsyasahay/shop-frontend:latest
     container_name: shop-frontend
-    ports:
-      - "80:80"
     depends_on:
       - backend
 
