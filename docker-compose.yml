@@ -12,6 +12,8 @@ services:
   frontend:
     image: bhavihsyasahay/shop-frontend:latest
     container_name: shop-frontend
+    ports:
+      - "80:80"
     depends_on:
       - backend
 
