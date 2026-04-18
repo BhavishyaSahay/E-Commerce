@@ -1,76 +1,137 @@
-name: Dockerized Deploy to EC2
+name: Production CI/CD Pipeline
 
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-push:
+  # --- Phase 1: Testing ---
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd client && npm ci
+          cd ../server && npm ci
+
+      - name: Run Server Tests
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: |
+          cd server && npm test
+
+      - name: Run Client Tests
+        run: |
+          cd client && npm test --if-present
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            server/coverage/
+            client/coverage/
+
+  # --- Phase 2: Infrastructure Provisioning (Terraform) ---
+  terraform:
+    name: "Terraform Apply"
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+    steps:
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ./terraform
+        run: terraform validate
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve -var="mongodb_uri=${{ secrets.MONGODB_URI }}"
+
+  # --- Phase 3: Container Build and Push ---
+  build-and-push:
+    name: "Build and Push to ECR"
+    needs: terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Build and push backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./server
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shop-backend:latest
-      
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./client
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shop-frontend:latest
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Build, tag, and push Backend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ecommerce-backend
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./server
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      - name: Build, tag, and push Frontend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ecommerce-frontend
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./client
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+  # --- Phase 4: Deploy to ECS ---
   deploy:
+    name: "Deploy to ECS Fargate"
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-            echo "🚀 Connecting to server..."
-
-            # Clone repo if not exists
-            if [ ! -d "/home/ubuntu/E-Commerce" ]; then
-              git clone https://github.com/BhavishyaSahay/E-Commerce.git /home/ubuntu/E-Commerce
-            fi
-
-            cd /home/ubuntu/E-Commerce
-
-            echo "Pull latest code"
-            git pull origin main
-
-            echo "Pull latest Docker images"
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shop-backend:latest
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shop-frontend:latest
-
-            echo "Stop old containers"
-            docker compose down
-
-            echo "Clean old images (optional)"
-            docker system prune -f
-
-            echo "Start new containers"
-            docker compose up -d
-
-            echo "Deployment completed"
-        
-
+      - name: Verify Service Health
+        run: |
+          echo "Verifying ECS Services are rolling out..."
+          aws ecs wait services-stable --cluster ecommerce-cluster --services ecommerce-backend-service ecommerce-frontend-service
+          echo "Deployment successful and verified!"
