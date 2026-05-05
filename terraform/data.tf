@@ -1,5 +1,7 @@
 data "aws_caller_identity" "current" {}
 
+# Data source for the default VPC. Note: some newer AWS accounts or certain regions
+# may not have a default VPC. If this fails, you must create one or specify a VPC ID.
 data "aws_vpc" "default" {
   default = true
 }

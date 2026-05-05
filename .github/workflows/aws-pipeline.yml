@@ -84,7 +84,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.0"
-          terraform_wrapper: false
+          terraform_wrapper: "false"
 
       # Empty backend-config values cause: backend "s3" {} — The value cannot be empty or all whitespace
       - name: Verify Terraform backend secrets

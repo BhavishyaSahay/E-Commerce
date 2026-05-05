@@ -1,6 +1,8 @@
 locals {
   # Application Load Balancer requires subnets in at least two Availability Zones.
-  alb_subnet_ids = slice(sort(tolist(data.aws_subnets.default.ids)), 0, min(2, length(data.aws_subnets.default.ids)))
+  # We sort and take the first two default subnets (one per AZ).
+  all_default_subnets = sort(tolist(data.aws_subnets.default.ids))
+  alb_subnet_ids      = slice(local.all_default_subnets, 0, min(2, length(local.all_default_subnets)))
 }
 
 resource "aws_security_group" "alb" {
