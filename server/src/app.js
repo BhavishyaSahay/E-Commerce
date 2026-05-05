@@ -1,7 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const connectDB = require('./config/db');
+
+const publicDist = path.join(__dirname, '..', 'public');
+const serveSpa = fs.existsSync(path.join(publicDist, 'index.html'));
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -37,7 +42,14 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 
-// ❌ REMOVED: root route that was blocking frontend
+// ✅ Production: serve Vite build from ../public (same origin as /api)
+if (serveSpa) {
+  app.use(express.static(publicDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(publicDist, 'index.html'));
+  });
+}
 
 // ✅ Error handling middleware
 app.use((err, req, res, next) => {

@@ -1,0 +1,267 @@
+# Rubric order: tests → Terraform → Docker build/push → ECS deploy → verify.
+# Prerequisites: see terraform/BOOTSTRAP_AND_SECRETS.txt (bootstrap state bucket + GitHub secrets).
+
+name: AWS Pipeline (ECS)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  TF_IN_AUTOMATION: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Lint client
+        run: npm run lint
+        working-directory: client
+
+      - name: Test client (Vitest + JUnit)
+        run: mkdir -p reports && npm run test -- --run
+        working-directory: client
+
+      - name: Test server (Jest + JUnit)
+        run: mkdir -p reports && npm run test -- --ci
+        working-directory: server
+
+      - name: Collect test reports
+        run: |
+          mkdir -p combined-reports
+          cp server/reports/*.xml combined-reports/ 2>/dev/null || true
+          cp client/reports/*.xml combined-reports/ 2>/dev/null || true
+          ls -la combined-reports/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: combined-reports/
+          if-no-files-found: warn
+
+  terraform:
+    needs: [test]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_database_url_secret_arn: ${{ secrets.DATABASE_URL_SECRET_ARN }}
+      TF_VAR_jwt_secret_arn: ${{ secrets.JWT_SECRET_ARN }}
+      TF_VAR_cloudinary_cloud_name_arn: ${{ secrets.CLOUDINARY_CLOUD_NAME_SECRET_ARN }}
+      TF_VAR_cloudinary_api_key_arn: ${{ secrets.CLOUDINARY_API_KEY_SECRET_ARN }}
+      TF_VAR_cloudinary_api_secret_arn: ${{ secrets.CLOUDINARY_API_SECRET_SECRET_ARN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      # Empty backend-config values cause: backend "s3" {} — The value cannot be empty or all whitespace
+      - name: Verify Terraform backend secrets
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          TF_STATE_DYNAMODB_TABLE: ${{ secrets.TF_STATE_DYNAMODB_TABLE }}
+        run: |
+          failed=0
+          if [ -z "${TF_STATE_BUCKET// }" ]; then echo "::error::Set GitHub secret TF_STATE_BUCKET (bootstrap output tfstate_bucket_name)."; failed=1; fi
+          if [ -z "${AWS_REGION// }" ]; then echo "::error::Set GitHub secret AWS_REGION (e.g. ap-south-1)."; failed=1; fi
+          if [ -z "${TF_STATE_DYNAMODB_TABLE// }" ]; then echo "::error::Set GitHub secret TF_STATE_DYNAMODB_TABLE (bootstrap output tfstate_lock_table_name)."; failed=1; fi
+          exit $failed
+
+      # S3 ListObjectsV2 returns 301 if backend "region" != bucket's real region (common: wrong TF_STATE_BUCKET or missing TF_STATE_REGION).
+      - name: Verify state bucket region matches backend region
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          TF_STATE_REGION: ${{ secrets.TF_STATE_REGION }}
+        run: |
+          set -euo pipefail
+          BACKEND_REGION="${TF_STATE_REGION:-$AWS_REGION}"
+          echo "Checking state bucket exists (same AWS account as CI credentials)..."
+          if ! aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
+            echo "::error::NoSuchBucket: TF_STATE_BUCKET is set to \"$TF_STATE_BUCKET\" but that bucket does not exist (or CI cannot access it)."
+            echo "::error::Fix: In AWS (same account as AWS_ACCESS_KEY_ID) open S3, copy the exact bootstrap bucket name, update the repository secret TF_STATE_BUCKET (no quotes, no trailing spaces). Wrong AWS account also causes this."
+            exit 1
+          fi
+          loc=$(aws s3api get-bucket-location --bucket "$TF_STATE_BUCKET" --query LocationConstraint --output text)
+          if [ -z "$loc" ] || [ "$loc" = "None" ] || [ "$loc" = "null" ]; then
+            loc="us-east-1"
+          fi
+          echo "State bucket: $TF_STATE_BUCKET"
+          echo "Bucket AWS region: $loc"
+          echo "Terraform S3 backend region: $BACKEND_REGION"
+          if [ "$loc" != "$BACKEND_REGION" ]; then
+            echo "::error::Region mismatch. This bucket lives in '$loc' but init uses '$BACKEND_REGION'."
+            echo "::error::Fix: (1) Set TF_STATE_BUCKET to the bucket you created in the same region as AWS_REGION, OR (2) Set TF_STATE_REGION=$loc so init targets the bucket's real region while AWS_REGION stays your app region."
+            exit 1
+          fi
+
+      # S3 backend "region" must match the region where TF_STATE_BUCKET was created.
+      # If bootstrap ran in us-east-1 but AWS_REGION is ap-south-1, set secret TF_STATE_REGION to the bucket region or you get S3 301 redirects on init.
+      - name: Terraform init (S3 backend)
+        env:
+          BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          KEY: ${{ secrets.TF_STATE_KEY || 'devops-ecom/terraform.tfstate' }}
+          BACKEND_REGION: ${{ secrets.TF_STATE_REGION || secrets.AWS_REGION }}
+          DYNAMODB_TABLE: ${{ secrets.TF_STATE_DYNAMODB_TABLE }}
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=$BUCKET" \
+            -backend-config="key=$KEY" \
+            -backend-config="region=$BACKEND_REGION" \
+            -backend-config="dynamodb_table=$DYNAMODB_TABLE"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color
+
+      - name: Terraform apply
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: terraform apply -input=false -auto-approve -no-color
+
+      - name: Write Terraform outputs
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: terraform output -json > "$GITHUB_WORKSPACE/terraform-outputs.json"
+
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        with:
+          name: terraform-outputs
+          path: terraform-outputs.json
+
+  docker-ecs:
+    needs: [terraform]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: terraform-outputs
+          path: .
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          REPO_URL=$(jq -r '.ecr_repository_url.value' terraform-outputs.json)
+          docker build -t "${REPO_URL}:${IMAGE_TAG}" -t "${REPO_URL}:latest" .
+          docker push "${REPO_URL}:${IMAGE_TAG}"
+          docker push "${REPO_URL}:latest"
+          echo "IMAGE_URI=${REPO_URL}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      # Merge Secrets Manager ARNs here because Terraform uses lifecycle.ignore_changes on container_definitions.
+      # Also ensure a terraform apply ran once with TF_VAR_* set so the execution role has secretsmanager:GetSecretValue.
+      - name: Register task definition and update ECS service
+        env:
+          DATABASE_URL_SECRET_ARN: ${{ secrets.DATABASE_URL_SECRET_ARN }}
+          JWT_SECRET_ARN: ${{ secrets.JWT_SECRET_ARN }}
+          CLOUDINARY_CLOUD_NAME_SECRET_ARN: ${{ secrets.CLOUDINARY_CLOUD_NAME_SECRET_ARN }}
+          CLOUDINARY_API_KEY_SECRET_ARN: ${{ secrets.CLOUDINARY_API_KEY_SECRET_ARN }}
+          CLOUDINARY_API_SECRET_SECRET_ARN: ${{ secrets.CLOUDINARY_API_SECRET_SECRET_ARN }}
+        run: |
+          set -euo pipefail
+          FAMILY=$(jq -r '.task_definition_family.value' terraform-outputs.json)
+          CLUSTER=$(jq -r '.ecs_cluster_name.value' terraform-outputs.json)
+          SERVICE=$(jq -r '.ecs_service_name.value' terraform-outputs.json)
+          aws ecs describe-task-definition --task-definition "$FAMILY" --query taskDefinition > td.json
+          jq --arg IMAGE "$IMAGE_URI" \
+            --arg DBARN "${DATABASE_URL_SECRET_ARN:-}" \
+            --arg JWTARN "${JWT_SECRET_ARN:-}" \
+            --arg CCN "${CLOUDINARY_CLOUD_NAME_SECRET_ARN:-}" \
+            --arg CAK "${CLOUDINARY_API_KEY_SECRET_ARN:-}" \
+            --arg CAS "${CLOUDINARY_API_SECRET_SECRET_ARN:-}" \
+            'del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy,.deregisteredAt,.tags)
+             | .containerDefinitions |= map(
+                 if .name == "app" then
+                   .image = $IMAGE
+                   | del(.command)
+                   | .secrets = (
+                       (if ($DBARN | length) > 0 then [{name:"DATABASE_URL",valueFrom:$DBARN}] else [] end)
+                     + (if ($JWTARN | length) > 0 then [{name:"JWT_SECRET",valueFrom:$JWTARN}] else [] end)
+                     + (if ($CCN | length) > 0 then [{name:"CLOUDINARY_CLOUD_NAME",valueFrom:$CCN}] else [] end)
+                     + (if ($CAK | length) > 0 then [{name:"CLOUDINARY_API_KEY",valueFrom:$CAK}] else [] end)
+                     + (if ($CAS | length) > 0 then [{name:"CLOUDINARY_API_SECRET",valueFrom:$CAS}] else [] end)
+                   )
+                 else . end
+               )' \
+            td.json > td-new.json
+          NEW_ARN=$(aws ecs register-task-definition --cli-input-json file://td-new.json --query taskDefinition.taskDefinitionArn --output text)
+          aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$NEW_ARN" --force-new-deployment
+
+      - name: Wait for ECS service stable
+        run: |
+          set -uo pipefail
+          CLUSTER=$(jq -r '.ecs_cluster_name.value' terraform-outputs.json)
+          SERVICE=$(jq -r '.ecs_service_name.value' terraform-outputs.json)
+          if aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"; then
+            echo "ECS service is stable."
+          else
+            echo "::error::ECS service did not become stable (waiter max attempts). Common causes: app crash on boot (MongoDB DATABASE_URL), failed ALB health checks, or image pull errors."
+            echo "=== Recent service events ==="
+            aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+              --query 'services[0].events[:15]' --output table 2>/dev/null || true
+            echo "=== Stopped tasks (latest, up to 5) ==="
+            TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --desired-status STOPPED \
+              --max-items 5 --query 'taskArns[]' --output text 2>/dev/null || true)
+            for arn in $TASKS; do
+              [ -z "$arn" ] || [ "$arn" = "None" ] && continue
+              echo "--- $arn ---"
+              aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$arn" \
+                --query 'tasks[0].{stoppedReason:stoppedReason,stopCode:stopCode,containers:containers[*].{name:name,reason:reason,exitCode:exitCode}}' \
+                --output json 2>/dev/null || true
+            done
+            echo "=== CloudWatch log group (tail hint) ==="
+            echo "/ecs/devops-ecom-app — open Logs Insights in the same region as ECS."
+            exit 1
+          fi
+
+      - name: Verify ALB /api/health
+        run: |
+          set -euo pipefail
+          ALB=$(jq -r '.alb_dns_name.value' terraform-outputs.json)
+          curl -fsS "http://${ALB}/api/health" | head -c 500
+          echo

@@ -117,3 +117,11 @@ client/*.local
 # Server specific
 server/node_modules/
 client/node_modules/
+
+# Terraform
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
