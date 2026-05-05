@@ -2,6 +2,8 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../src/app');
 
+jest.setTimeout(30000); // 30 seconds timeout for CI environments
+
 // Since we bypass DB connection in 'test' env, we manually connect to an in-memory or test DB 
 // to ensure API + DB interaction works correctly during testing.
 describe('Integration Tests: API + DB / Modules Interaction', () => {

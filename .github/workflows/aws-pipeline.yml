@@ -40,6 +40,8 @@ jobs:
         working-directory: client
 
       - name: Test server (Jest + JUnit)
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: mkdir -p reports && npm run test -- --ci
         working-directory: server
 
