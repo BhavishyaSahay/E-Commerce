@@ -19,7 +19,8 @@ const app = express();
 
 // Connect to database
 if (process.env.NODE_ENV !== 'test') {
-  connectDB();
+  // temporarily disabled to bypass ECS crash
+  // connectDB();
 }
 
 // Middleware
